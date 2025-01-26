@@ -61,7 +61,7 @@ contract AIDebate is Initializable, Ownable {
 
     // create instance of mapping for debates and bets.
     mapping(uint256 => Debate) public debateList; // store debateID to debate info. this list will be filled by admin ?
-    mapping(uint256 => mapping (address => Bet)) public betList; // store debateID to bettor to bet info for each debate
+    mapping(uint256 => mapping (address => mapping (uint256 => Bet))) public betList; // store debateID to bettor to bet info for each debate
     mapping(uint256 => address[]) public addressJoinedList; // store list of bettors to each debateID for faster retrieval?? IDK
 
     // this placeBet function is used to place a bet on a debate. It takes 4 parameters: _debateId, _amount, _chosenAgent, _feeRatio. For now, this placeBet also create a debate
@@ -100,8 +100,13 @@ contract AIDebate is Initializable, Ownable {
             debate.endTimeStamp = _endSessionTimeStamp;
         }
 
-        // record the betInfo of sender into the betList with _debateId as key
-        betList[_debateId][msg.sender] = Bet(_debateId, msg.sender, _amount, 0,  _chosenAgent, false);
+        // record the betInfo of sender into the betList with _debateId // address // agentID as key
+        Bet storage oldBet = betList[_debateId][msg.sender][_chosenAgent];
+        if (oldBet.amount > 0) {
+            oldBet.amount += _amount;
+        } else {
+            betList[_debateId][msg.sender][_chosenAgent] = Bet(_debateId, msg.sender, _amount, 0,  _chosenAgent, false);
+        }
         // record the address of the bettor into the addressJoinedList with _debateId as key
         addressJoinedList[_debateId].push(msg.sender);
         emit BetPlaced(_debateId, msg.sender, _chosenAgent, _amount, _platformFeePercentage);
@@ -126,7 +131,7 @@ contract AIDebate is Initializable, Ownable {
         // we calculate the winAmount per bettor when debate is resolved
         for (uint256 i = 0; i < addressJoinedList[_debateId].length; i++) {
             address bettor = addressJoinedList[_debateId][i];
-            Bet memory bet = betList[_debateId][bettor];
+            Bet memory bet = betList[_debateId][bettor][_winAgentId];
             if (bet.chosenAgentId != _winAgentId) {
                 continue;
             }
@@ -150,10 +155,18 @@ contract AIDebate is Initializable, Ownable {
         require(debate.isResolved, "Debate is not resolved yet");
 
         // check if the user is bettor or not
-        Bet memory bet = betList[_debateId][msg.sender];
-        require(bet.bettor == msg.sender, "You did not joined in the battle");
-
+        for (uint256 i = 0; i < addressJoinedList[_debateId].length; i++) {
+            if (addressJoinedList[_debateId][i] == msg.sender) {
+                break;
+            }
+            if (i == addressJoinedList[_debateId].length - 1) {
+                revert("You did not joined in the battle");
+            }
+        }
         // check if the user has claimed the reward or not
+        // find winAgentID
+        uint256 winAgentID = debate.winAgentId;
+        Bet storage bet = betList[_debateId][msg.sender][winAgentID];
         require(!bet.isClaimed, "You have already claimed the reward");
 
         // transfer the reward to the user
