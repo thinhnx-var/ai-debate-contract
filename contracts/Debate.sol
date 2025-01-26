@@ -132,17 +132,16 @@ contract AIDebate is Initializable, Ownable {
         for (uint256 i = 0; i < addressJoinedList[_debateId].length; i++) {
             address bettor = addressJoinedList[_debateId][i];
             Bet memory bet = betList[_debateId][bettor][_winAgentId];
-            if (bet.chosenAgentId != _winAgentId) {
-                continue;
-            }
             uint256 betProfit = bet.amount * ( 100 - debate.platformFeePercentage) / prizePool;
-            // winAmount = bet amount + profit
-            uint256 winAmount = betProfit + bet.amount;
-            if (_winAgentId == debate.agentAID) {
-            bet.winAmount = winAmount;
-        } else {
-            bet.winAmount = 0;
-        }
+            if (bet.chosenAgentId != _winAgentId) {
+                // do nothing, check next bettor
+                break;
+            } else {
+                // winAmount = bet amount + profit
+                uint256 winAmount = betProfit + bet.amount;
+                bet.winAmount = winAmount;
+            }
+
         }
 
         emit DebateResolved(_debateId, _winAgentId);
@@ -168,6 +167,8 @@ contract AIDebate is Initializable, Ownable {
         uint256 winAgentID = debate.winAgentId;
         Bet storage bet = betList[_debateId][msg.sender][winAgentID];
         require(!bet.isClaimed, "You have already claimed the reward");
+
+        require(bet.winAmount > 0, "You did not win the bet");
 
         // transfer the reward to the user
         address payable _recipient = convertAddressToPayable(msg.sender);
