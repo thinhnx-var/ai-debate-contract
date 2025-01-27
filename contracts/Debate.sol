@@ -130,7 +130,7 @@ contract AIDebate is Initializable, Ownable {
         // we calculate the winAmount per bettor when debate is resolved
         for (uint256 i = 0; i < addressJoinedList[_debateId].length; i++) {
             address bettor = addressJoinedList[_debateId][i];
-            Bet memory bet = betList[_debateId][bettor][_winAgentId];
+            Bet storage bet = betList[_debateId][bettor][_winAgentId];
             uint256 betProfit = bet.amount * ( 100 - debate.platformFeePercentage) / prizePool;
             if (bet.chosenAgentId != _winAgentId) {
                 // do nothing, check next bettor
