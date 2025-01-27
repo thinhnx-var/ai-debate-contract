@@ -121,7 +121,6 @@ contract AIDebate is Initializable, Ownable {
 
     // this function is used to resolve a debate by whitelist. It takes 2 parameters: _debateId, winAgentId. The reward is calculated base on _feeRatio of the debate.
     function resolveDebate(uint256 _debateId, uint8 _winAgentId) external {
-        require(compareSenderWithAddressString("0xCa422Ade414CD9FC5a01e314A0c6cAe1080e6807"), "Only whitelist can resolve the debate");
         Debate storage debate = debateList[_debateId];
         require(!debate.isResolved, "Debate is already resolved");
         require(_winAgentId == debate.agentAID || _winAgentId == debate.agentBID, "Invalid agent");
