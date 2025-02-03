@@ -37,6 +37,13 @@ contract AIDebate is Initializable, Ownable {
         uint8 winnAgentId
     );
 
+    event UserClaimed(
+        uint256 indexed debateId,
+        address indexed bettor,
+        uint8 chosenAgentId,
+        uint256 amount
+    );
+
     // define the data structures that we need
     // debateInfo
     struct Debate {
@@ -174,6 +181,8 @@ contract AIDebate is Initializable, Ownable {
         transferNative(_recipient, bet.winAmount);
 
         bet.isClaimed = true;
+
+        emit UserClaimed(_debateId, msg.sender, bet.chosenAgentId, bet.winAmount);
     }
 
     // for now we dont have adminSetDebateSession function. So these functions are enough.
