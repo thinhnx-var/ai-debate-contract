@@ -138,14 +138,18 @@ contract AIDebate is Initializable, Ownable {
         for (uint256 i = 0; i < addressJoinedList[_debateId].length; i++) {
             address bettor = addressJoinedList[_debateId][i];
             Bet storage bet = betList[_debateId][bettor][_winAgentId];
-            uint256 betProfit = bet.amount * ( 100 - debate.platformFeePercentage) / prizePool;
+            // uint256 betProfit = bet.amount * ( 100 - debate.platformFeePercentage) / prizePool;
             if (bet.chosenAgentId != _winAgentId) {
                 // do nothing, check next bettor
                 break;
             } else {
-                // winAmount = bet amount + profit
-                uint256 winAmount = betProfit + bet.amount;
-                bet.winAmount = winAmount;
+                uint256 betProfit = 0;
+                if (bet.chosenAgentId == debate.agentAID) {
+                    betProfit = (bet.amount / debate.totalAgentABetAmount) * prizePool * (100 - debate.platformFeePercentage) / 100;
+                } else {
+                    betProfit = (bet.amount / debate.totalAgentBBetAmount) * prizePool * (100 - debate.platformFeePercentage) / 100;
+                }
+                bet.winAmount = betProfit;
             }
 
         }

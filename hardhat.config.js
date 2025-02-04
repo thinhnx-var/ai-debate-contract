@@ -21,7 +21,7 @@ module.exports = {
 			// url: "https://rpc-testnet.0g.ai",
 			chainId: 16600,
 			accounts: [process.env.PRVKEY],
-			gas: 3000000,
+			gas: 300000000,
       		gasPrice: 3000000000,
 		},
 	},
