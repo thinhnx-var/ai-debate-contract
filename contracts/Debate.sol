@@ -27,6 +27,15 @@ contract AIDebate is Initializable, Ownable {
         uint256 platformFeePercentage
     );
 
+    event DebateCreated(
+        uint256 indexed debateId,
+        uint8 agentAID,
+        uint8 agentBID,
+        uint256 platformFeePercentage,
+        uint256 publicTimeStamp,
+        uint256 endTimeStamp
+    );
+
     event DebateResolved(
         uint256 indexed debateId,
         uint8 winnAgentId
@@ -44,13 +53,18 @@ contract AIDebate is Initializable, Ownable {
         uint256 amount
     );
 
+    //default platform fee
+    uint256 public defaultPlatformFeePercentage = 5;
+    uint256 private fiveMinsDuration = 5*60*1000; // 5 mins in milliseconds
+
     // define the data structures that we need
     // debateInfo
     struct Debate {
         bool isResolved;
         uint8 winAgentId;
         uint256 platformFeePercentage;
-        uint256 endTimeStamp;
+        uint256 endTimeStamp; // before endTime - 5m, bettors can place bet, afterthat, no one can place bet
+        uint256 publicTimeStamp;
         uint8 agentAID;
         uint8 agentBID;
         uint256 totalAgentABetAmount;
@@ -75,9 +89,7 @@ contract AIDebate is Initializable, Ownable {
     function placeBet(
         uint256 _debateId,
         uint256 _amount,
-        uint8 _chosenAgent,
-        uint256 _platformFeePercentage, // we need feeRatio to calculate the prize
-        uint256 _endSessionTimeStamp
+        uint8 _chosenAgent
         ) external payable {
 
         require(_amount > 0, "Amount must be greater than 0");
@@ -85,7 +97,11 @@ contract AIDebate is Initializable, Ownable {
 
         // insert debateInfo to debateList with _debateId as key. we get the existing debate if it is already existed, otherwise create a new debate
         Debate storage debate = debateList[_debateId];
+        require(debate.publicTimeStamp > 0, "Debate is not published yet");
+        require(debate.endTimeStamp != 0, "Debate is deleted");
         require(!debate.isResolved, "Debate session is already resolved");
+        require(block.timestamp > debate.publicTimeStamp, "Debate session is not started yet");
+        require(block.timestamp < debate.endTimeStamp - fiveMinsDuration, "Debate session is already ended");
         // value sent must be greater than or equal to the amount
         require(msg.value >= _amount, "Fee amount is not correct");
 
@@ -103,8 +119,6 @@ contract AIDebate is Initializable, Ownable {
             debate.agentBID = _chosenAgent;
             debate.totalAgentBBetAmount += _amount;
             }
-            debate.platformFeePercentage = _platformFeePercentage;
-            debate.endTimeStamp = _endSessionTimeStamp;
         }
 
         // record the betInfo of sender into the betList with _debateId // address // agentID as key
@@ -116,9 +130,51 @@ contract AIDebate is Initializable, Ownable {
         }
         // record the address of the bettor into the addressJoinedList with _debateId as key
         addressJoinedList[_debateId].push(msg.sender);
-        emit BetPlaced(_debateId, msg.sender, _chosenAgent, _amount, _platformFeePercentage);
+        emit BetPlaced(_debateId, msg.sender, _chosenAgent, _amount, debate.platformFeePercentage);
     }
 
+    // admin create debate
+    function adminCreateDebate(uint256 _debateId, uint8 _agentAID, uint8 _agentBID, uint256 _platformFeePercentage, uint256 _publicTimeStamp, uint256 _endSessionTimeStamp) external onlyOwner {
+        Debate storage debate = debateList[_debateId];
+        require(debate.agentAID == 0 && debate.agentBID == 0, "Debate is already created");
+        require(_endSessionTimeStamp > _publicTimeStamp, "End time must be greater than public time");
+        debate.agentAID = _agentAID;
+        debate.agentBID = _agentBID;
+        if (_platformFeePercentage == 0) {
+            debate.platformFeePercentage = defaultPlatformFeePercentage;
+        } else {
+            debate.platformFeePercentage = _platformFeePercentage;
+        }
+        debate.publicTimeStamp = _publicTimeStamp;
+        debate.endTimeStamp = _endSessionTimeStamp;
+        emit DebateCreated(_debateId, _agentAID, _agentBID, _platformFeePercentage, _publicTimeStamp, _endSessionTimeStamp);
+    }
+
+    // admin update debate
+    function adminUpdateDebate(uint256 _debateId, uint8 _agentAID, uint8 _agentBID, uint256 _platformFeePercentage, uint256 _publicTimeStamp, uint256 _endSessionTimeStamp) external onlyOwner {
+        Debate storage debate = debateList[_debateId];
+        require(debate.agentAID != 0 && debate.agentBID != 0, "Debate is not created yet");
+        debate.agentAID = _agentAID;
+        debate.agentBID = _agentBID;
+        if (_platformFeePercentage == 0) {
+            debate.platformFeePercentage = defaultPlatformFeePercentage;
+        } else {
+            debate.platformFeePercentage = _platformFeePercentage;
+        }
+        debate.publicTimeStamp = _publicTimeStamp;
+        debate.endTimeStamp = _endSessionTimeStamp;
+        emit DebateUpdated(_debateId, _agentAID);
+    }
+
+    // admin delete debate - admin will set time to 0
+    function admindDeleteDebate(uint256 _debateId) external onlyOwner {
+        Debate storage debate = debateList[_debateId];
+        require(debate.agentAID != 0 && debate.agentBID != 0, "Debate is not created yet");
+        debate.publicTimeStamp = 0;
+        debate.endTimeStamp = 0;
+        // consider event
+        emit DebateUpdated(_debateId, 0);
+    }
     function transferNative(address payable _to, uint256 _amount) private {
         require(address(this).balance >= _amount, "Insufficient balance in contract"); 
         (bool success, ) = _to.call{value: _amount}(""); 
@@ -127,7 +183,7 @@ contract AIDebate is Initializable, Ownable {
 
 
     // this function is used to resolve a debate by whitelist. It takes 2 parameters: _debateId, winAgentId. The reward is calculated base on _feeRatio of the debate.
-    function resolveDebate(uint256 _debateId, uint8 _winAgentId) external {
+    function adminResolveDebate(uint256 _debateId, uint8 _winAgentId) external onlyOwner {
         Debate storage debate = debateList[_debateId];
         require(!debate.isResolved, "Debate is already resolved");
         require(_winAgentId == debate.agentAID || _winAgentId == debate.agentBID, "Invalid agent");
@@ -203,7 +259,7 @@ contract AIDebate is Initializable, Ownable {
 
 
     // For whitelist // 1 of 3 ways to do whitelist: 1. Use a mapping. 2. Use severside verification. 3. Use a contract and merkle tree
-    mapping(address => bool) public whitelist;
+    mapping(address => bool) private whitelist;
     function addWhitelist(address _address) external onlyOwner {
         whitelist[_address] = true;
     }
