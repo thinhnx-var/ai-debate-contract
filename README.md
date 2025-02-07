@@ -7,6 +7,6 @@
 ## Fast interact after deployed:
 **IMPORTANT:** `Only Deployer can Create / Update / Delete Debate now`
 - use: https://legacy.getlaika.app/ with corresponding CA and ABI.
-- or you can use our pre-compiled contract at:
-    - `0x69b4A2532219C45dbf5561e4f8c544f9683A8e77` ||| `Newton testnet` ||| `Dev-Account (ThinhNX)`
-    - `0x670113CFA2542Ce6828b0001298d77d6e2E3708f` ||| `Newton testnet` ||| `Tester-Account (0xCa422Ade414CD9FC5a01e314A0c6cAe1080e6807)`
+- or you can use our pre-compiled contract at:  `Newton testnet`
+    - `0x69b4A2532219C45dbf5561e4f8c544f9683A8e77` ||| `Dev-Account (ThinhNX)`
+    - `0xb2448947C79280A99a75012e2734015DB754e0C0` ||| `Tester-Account (0xCa422Ade414CD9FC5a01e314A0c6cAe1080e6807)`
