@@ -33,17 +33,26 @@ contract AIDebate is Initializable, Ownable {
         uint8 agentBID,
         uint256 platformFeePercentage,
         uint256 publicTimeStamp,
-        uint256 endTimeStamp
+        uint256 startTimeStamp,
+        uint256 sessionDuration
+    );
+
+    event DebateDeleted(
+        uint256 indexed debateId
     );
 
     event DebateResolved(
         uint256 indexed debateId,
         uint8 winnAgentId
     );
-
     event DebateUpdated(
         uint256 indexed debateId,
-        uint8 winnAgentId
+        uint8 agentAID,
+        uint8 agentBID,
+        uint256 platformFeePercentage,
+        uint256 publicTimeStamp,
+        uint256 startTimeStamp,
+        uint256 sessionDuration
     );
 
     event UserClaimed(
@@ -63,7 +72,8 @@ contract AIDebate is Initializable, Ownable {
         bool isResolved;
         uint8 winAgentId;
         uint256 platformFeePercentage;
-        uint256 endTimeStamp; // before endTime - 5m, bettors can place bet, afterthat, no one can place bet
+        uint256 sessionDuration; // before endTime - 5m, bettors can place bet, afterthat, no one can place bet
+        uint256 startTimeStamp;
         uint256 publicTimeStamp;
         uint8 agentAID;
         uint8 agentBID;
@@ -98,10 +108,10 @@ contract AIDebate is Initializable, Ownable {
         // insert debateInfo to debateList with _debateId as key. we get the existing debate if it is already existed, otherwise create a new debate
         Debate storage debate = debateList[_debateId];
         require(debate.publicTimeStamp > 0, "Debate is not published yet");
-        require(debate.endTimeStamp != 0, "Debate is deleted");
+        require(debate.startTimeStamp != 0, "Debate is deleted");
         require(!debate.isResolved, "Debate session is already resolved");
         require(block.timestamp > debate.publicTimeStamp, "Debate session is not started yet");
-        require(block.timestamp < debate.endTimeStamp - fiveMinsDuration, "Debate session is already ended");
+        require(block.timestamp < debate.startTimeStamp + debate.sessionDuration, "Can not place bet anymore");
         // value sent must be greater than or equal to the amount
         require(msg.value >= _amount, "Fee amount is not correct");
 
@@ -134,10 +144,10 @@ contract AIDebate is Initializable, Ownable {
     }
 
     // admin create debate
-    function adminCreateDebate(uint256 _debateId, uint8 _agentAID, uint8 _agentBID, uint256 _platformFeePercentage, uint256 _publicTimeStamp, uint256 _endSessionTimeStamp) external onlyOwner {
+    function adminCreateDebate(uint256 _debateId, uint8 _agentAID, uint8 _agentBID, uint256 _platformFeePercentage, uint256 _publicTimeStamp, uint256 _startTimeStamp, uint256 _sessionDuration) external onlyOwner {
         Debate storage debate = debateList[_debateId];
         require(debate.agentAID == 0 && debate.agentBID == 0, "Debate is already created");
-        require(_endSessionTimeStamp > _publicTimeStamp, "End time must be greater than public time");
+        require(_startTimeStamp + _sessionDuration > _publicTimeStamp, "End time must be greater than public time");
         debate.agentAID = _agentAID;
         debate.agentBID = _agentBID;
         if (_platformFeePercentage == 0) {
@@ -146,12 +156,13 @@ contract AIDebate is Initializable, Ownable {
             debate.platformFeePercentage = _platformFeePercentage;
         }
         debate.publicTimeStamp = _publicTimeStamp;
-        debate.endTimeStamp = _endSessionTimeStamp;
-        emit DebateCreated(_debateId, _agentAID, _agentBID, _platformFeePercentage, _publicTimeStamp, _endSessionTimeStamp);
+        debate.startTimeStamp = _startTimeStamp;
+        debate.sessionDuration = _sessionDuration;
+        emit DebateCreated(_debateId, _agentAID, _agentBID, _platformFeePercentage, _publicTimeStamp, _startTimeStamp, _sessionDuration);
     }
 
     // admin update debate
-    function adminUpdateDebate(uint256 _debateId, uint8 _agentAID, uint8 _agentBID, uint256 _platformFeePercentage, uint256 _publicTimeStamp, uint256 _endSessionTimeStamp) external onlyOwner {
+    function adminUpdateDebate(uint256 _debateId, uint8 _agentAID, uint8 _agentBID, uint256 _platformFeePercentage, uint256 _publicTimeStamp, uint256 _startTimeStamp, uint256 _sessionDuration) external onlyOwner {
         Debate storage debate = debateList[_debateId];
         require(debate.agentAID != 0 && debate.agentBID != 0, "Debate is not created yet");
         debate.agentAID = _agentAID;
@@ -162,8 +173,9 @@ contract AIDebate is Initializable, Ownable {
             debate.platformFeePercentage = _platformFeePercentage;
         }
         debate.publicTimeStamp = _publicTimeStamp;
-        debate.endTimeStamp = _endSessionTimeStamp;
-        emit DebateUpdated(_debateId, _agentAID);
+        debate.startTimeStamp = _startTimeStamp;
+        debate.sessionDuration = _sessionDuration;
+        emit DebateUpdated(_debateId, _agentAID, _agentBID, _platformFeePercentage, _publicTimeStamp, _startTimeStamp, _sessionDuration);
     }
 
     // admin delete debate - admin will set time to 0
@@ -171,9 +183,10 @@ contract AIDebate is Initializable, Ownable {
         Debate storage debate = debateList[_debateId];
         require(debate.agentAID != 0 && debate.agentBID != 0, "Debate is not created yet");
         debate.publicTimeStamp = 0;
-        debate.endTimeStamp = 0;
+        debate.startTimeStamp = 0;
+        debate.sessionDuration = 0;
         // consider event
-        emit DebateUpdated(_debateId, 0);
+        emit DebateDeleted(_debateId);
     }
     function transferNative(address payable _to, uint256 _amount) private {
         require(address(this).balance >= _amount, "Insufficient balance in contract"); 
