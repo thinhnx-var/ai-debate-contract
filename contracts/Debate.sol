@@ -179,7 +179,7 @@ contract AIDebate is Initializable, Ownable {
     }
 
     // admin delete debate - admin will set time to 0
-    function admindDeleteDebate(uint256 _debateId) external onlyOwner {
+    function adminDeleteDebate(uint256 _debateId) external onlyOwner {
         Debate storage debate = debateList[_debateId];
         require(debate.agentAID != 0 && debate.agentBID != 0, "Debate is not created yet");
         debate.publicTimeStamp = 0;
