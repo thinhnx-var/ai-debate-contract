@@ -111,7 +111,7 @@ contract AIDebate is Initializable, Ownable {
         require(debate.startTimeStamp != 0, "Debate is deleted");
         require(!debate.isResolved, "Debate session is already resolved");
         require(block.timestamp > debate.publicTimeStamp, "Debate session is not started yet");
-        require(block.timestamp < debate.startTimeStamp + debate.sessionDuration, "Can not place bet anymore");
+        require(block.timestamp < debate.startTimeStamp + debate.sessionDuration - fiveMinsDuration, "Can not place bet anymore");
         // value sent must be greater than or equal to the amount
         require(msg.value >= _amount, "Fee amount is not correct");
 
