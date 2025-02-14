@@ -65,6 +65,7 @@ contract AIDebate is Initializable, Ownable {
     //default platform fee
     uint256 public defaultPlatformFeePercentage = 5;
     uint256 private fiveMinsDuration = 5*60*1000; // 5 mins in milliseconds
+    uint256 private thirtyMinsBeforePublish = 30*60*1000; // 30 mins in milliseconds
 
     // define the data structures that we need
     // debateInfo
@@ -165,6 +166,7 @@ contract AIDebate is Initializable, Ownable {
     function adminUpdateDebate(uint256 _debateId, uint8 _agentAID, uint8 _agentBID, uint256 _platformFeePercentage, uint256 _publicTimeStamp, uint256 _startTimeStamp, uint256 _sessionDuration) external onlyOwner {
         Debate storage debate = debateList[_debateId];
         require(debate.agentAID != 0 && debate.agentBID != 0, "Debate is not created yet");
+        require(block.timestamp < debate.publicTimeStamp - thirtyMinsBeforePublish, "Can not modify debate anymore");
         debate.agentAID = _agentAID;
         debate.agentBID = _agentBID;
         if (_platformFeePercentage == 0) {
@@ -181,6 +183,7 @@ contract AIDebate is Initializable, Ownable {
     // admin delete debate - admin will set time to 0
     function adminDeleteDebate(uint256 _debateId) external onlyOwner {
         Debate storage debate = debateList[_debateId];
+        require(block.timestamp < debate.publicTimeStamp - thirtyMinsBeforePublish, "Can not remove debate anymore");
         require(debate.agentAID != 0 && debate.agentBID != 0, "Debate is not created yet");
         debate.publicTimeStamp = 0;
         debate.startTimeStamp = 0;
