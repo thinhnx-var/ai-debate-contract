@@ -9,4 +9,4 @@
 - use: https://legacy.getlaika.app/ with corresponding CA and ABI.
 - or you can use our pre-compiled contract at:  `Newton testnet`
     - `0x69b4A2532219C45dbf5561e4f8c544f9683A8e77` ||| `Dev-Account (ThinhNX)`
-    - `0xeeb19CB8CCA8367f5e9D09305F4C0a5B926b1b15` ||| `Tester-Account (0xCa422Ade414CD9FC5a01e314A0c6cAe1080e6807)`
+    - `0x6E7cD42F2c4408048037430495A6Aa821282Cb8A` ||| `Tester-Account (0xCa422Ade414CD9FC5a01e314A0c6cAe1080e6807)`

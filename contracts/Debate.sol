@@ -64,8 +64,8 @@ contract AIDebate is Initializable, Ownable {
 
     //default platform fee
     uint256 public defaultPlatformFeePercentage = 5;
-    uint256 private fiveMinsDuration = 5*60*1000; // 5 mins in milliseconds
-    uint256 private thirtyMinsBeforePublish = 30*60*1000; // 30 mins in milliseconds
+    uint256 private fiveMinsDuration = 5*60; // 5 mins in seconds
+    uint256 private thirtyMinsBeforePublish = 30*60; // 30 mins in seconds
 
     // define the data structures that we need
     // debateInfo
