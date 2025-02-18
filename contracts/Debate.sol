@@ -191,11 +191,11 @@ contract AIDebate is Initializable, Ownable {
         // consider event
         emit DebateDeleted(_debateId);
     }
-    function transferNative(address payable _to, uint256 _amount) private {
-        require(address(this).balance >= _amount, "Insufficient balance in contract"); 
-        (bool success, ) = _to.call{value: _amount}(""); 
-        require(success, "Transfer token failed");
-    }
+    // function transferCoin(address payable _to, uint256 _amount) private  {
+    //     require(address(this).balance >= _amount, "Insufficient balance in contract"); 
+    //     (bool success, ) = _to.call{value: _amount}(""); 
+    //     require(success, "Transfer token failed");
+    // }
 
 
     // this function is used to resolve a debate by whitelist. It takes 2 parameters: _debateId, winAgentId. The reward is calculated base on _feeRatio of the debate.
@@ -210,11 +210,7 @@ contract AIDebate is Initializable, Ownable {
         for (uint256 i = 0; i < addressJoinedList[_debateId].length; i++) {
             address bettor = addressJoinedList[_debateId][i];
             Bet storage bet = betList[_debateId][bettor][_winAgentId];
-            // uint256 betProfit = bet.amount * ( 100 - debate.platformFeePercentage) / prizePool;
-            if (bet.chosenAgentId != _winAgentId) {
-                // do nothing, check next bettor
-                break;
-            } else {
+            if (bet.chosenAgentId == _winAgentId) {
                 uint256 betProfit = 0;
                 if (bet.chosenAgentId == debate.agentAID) {
                     betProfit = (bet.amount / debate.totalAgentABetAmount) * prizePool * (100 - debate.platformFeePercentage) / 100;
@@ -223,7 +219,6 @@ contract AIDebate is Initializable, Ownable {
                 }
                 bet.winAmount = betProfit;
             }
-
         }
 
         emit DebateResolved(_debateId, _winAgentId);
@@ -253,8 +248,8 @@ contract AIDebate is Initializable, Ownable {
 
         // transfer the reward to the user
         address payable _recipient = convertAddressToPayable(msg.sender);
-        transferNative(_recipient, bet.winAmount);
-
+        require(address(this).balance >= bet.winAmount, "Insufficient balance in contract");
+        _recipient.transfer(bet.winAmount); // Automatically reverts on failure
         bet.isClaimed = true;
 
         emit UserClaimed(_debateId, msg.sender, bet.chosenAgentId, bet.winAmount);
