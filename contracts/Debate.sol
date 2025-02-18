@@ -234,16 +234,15 @@ contract AIDebate is Initializable, Ownable {
         // check if the debate is resolved or not
         Debate storage debate = debateList[_debateId];
         require(debate.isResolved, "Debate is not resolved yet");
-
+        
         // check if the user is bettor or not
+        bool isBettor = false;
         for (uint256 i = 0; i < addressJoinedList[_debateId].length; i++) {
             if (addressJoinedList[_debateId][i] == msg.sender) {
-                break;
-            }
-            if (i == addressJoinedList[_debateId].length - 1) {
-                revert("You did not joined in the battle");
+                isBettor = true;
             }
         }
+        require(isBettor, "You did not place any bet on this debate");
         // check if the user has claimed the reward or not
         // find winAgentID
         uint256 winAgentID = debate.winAgentId;
