@@ -22,15 +22,15 @@ contract AIDebate is Initializable, Ownable {
     event BetPlaced(
         uint256 indexed debateId,
         address indexed bettor,
-        uint8 chosenAgentId,
+        uint chosenAgentId,
         uint256 amount,
         uint256 platformFeePercentage
     );
 
     event DebateCreated(
         uint256 indexed debateId,
-        uint8 agentAID,
-        uint8 agentBID,
+        uint agentAID,
+        uint agentBID,
         uint256 platformFeePercentage,
         uint256 publicTimeStamp,
         uint256 startTimeStamp,
@@ -43,12 +43,12 @@ contract AIDebate is Initializable, Ownable {
 
     event DebateResolved(
         uint256 indexed debateId,
-        uint8 winnAgentId
+        uint winnAgentId
     );
     event DebateUpdated(
         uint256 indexed debateId,
-        uint8 agentAID,
-        uint8 agentBID,
+        uint agentAID,
+        uint agentBID,
         uint256 platformFeePercentage,
         uint256 publicTimeStamp,
         uint256 startTimeStamp,
@@ -58,7 +58,7 @@ contract AIDebate is Initializable, Ownable {
     event UserClaimed(
         uint256 indexed debateId,
         address indexed bettor,
-        uint8 chosenAgentId,
+        uint chosenAgentId,
         uint256 amount
     );
 
@@ -71,13 +71,13 @@ contract AIDebate is Initializable, Ownable {
     // debateInfo
     struct Debate {
         bool isResolved;
-        uint8 winAgentId;
+        uint winAgentId;
         uint256 platformFeePercentage;
         uint256 sessionDuration; // before endTime - 5m, bettors can place bet, afterthat, no one can place bet
         uint256 startTimeStamp;
         uint256 publicTimeStamp;
-        uint8 agentAID;
-        uint8 agentBID;
+        uint agentAID;
+        uint agentBID;
         uint256 totalAgentABetAmount;
         uint256 totalAgentBBetAmount;
     }
@@ -87,7 +87,7 @@ contract AIDebate is Initializable, Ownable {
         address bettor;
         uint256 amount;
         uint256 winAmount;
-        uint8 chosenAgentId;
+        uint chosenAgentId;
         bool isClaimed;
     }
 
@@ -100,7 +100,7 @@ contract AIDebate is Initializable, Ownable {
     function placeBet(
         uint256 _debateId,
         uint256 _amount,
-        uint8 _chosenAgent
+        uint _chosenAgent
         ) external payable {
 
         require(_amount > 0, "Amount must be greater than 0");
@@ -137,6 +137,7 @@ contract AIDebate is Initializable, Ownable {
         if (oldBet.amount > 0) {
             oldBet.amount += _amount;
         } else {
+            // Bet: debateId, bettor, amount, winAmount, chosenAgentId, isClaimed
             betList[_debateId][msg.sender][_chosenAgent] = Bet(_debateId, msg.sender, _amount, 0,  _chosenAgent, false);
         }
         // record the address of the bettor into the addressJoinedList with _debateId as key
@@ -145,7 +146,7 @@ contract AIDebate is Initializable, Ownable {
     }
 
     // admin create debate
-    function adminCreateDebate(uint256 _debateId, uint8 _agentAID, uint8 _agentBID, uint256 _platformFeePercentage, uint256 _publicTimeStamp, uint256 _startTimeStamp, uint256 _sessionDuration) external onlyOwner {
+    function adminCreateDebate(uint256 _debateId, uint _agentAID, uint _agentBID, uint256 _platformFeePercentage, uint256 _publicTimeStamp, uint256 _startTimeStamp, uint256 _sessionDuration) external onlyOwner {
         Debate storage debate = debateList[_debateId];
         require(debate.agentAID == 0 && debate.agentBID == 0, "Debate is already created");
         require(_startTimeStamp + _sessionDuration > _publicTimeStamp, "End time must be greater than public time");
@@ -163,7 +164,7 @@ contract AIDebate is Initializable, Ownable {
     }
 
     // admin update debate
-    function adminUpdateDebate(uint256 _debateId, uint8 _agentAID, uint8 _agentBID, uint256 _platformFeePercentage, uint256 _publicTimeStamp, uint256 _startTimeStamp, uint256 _sessionDuration) external onlyOwner {
+    function adminUpdateDebate(uint256 _debateId, uint _agentAID, uint _agentBID, uint256 _platformFeePercentage, uint256 _publicTimeStamp, uint256 _startTimeStamp, uint256 _sessionDuration) external onlyOwner {
         Debate storage debate = debateList[_debateId];
         require(debate.agentAID != 0 && debate.agentBID != 0, "Debate is not created yet");
         require(block.timestamp < debate.publicTimeStamp - thirtyMinsBeforePublish, "Can not modify debate anymore");
@@ -199,7 +200,7 @@ contract AIDebate is Initializable, Ownable {
 
 
     // this function is used to resolve a debate by whitelist. It takes 2 parameters: _debateId, winAgentId. The reward is calculated base on _feeRatio of the debate.
-    function adminResolveDebate(uint256 _debateId, uint8 _winAgentId) external onlyOwner {
+    function adminResolveDebate(uint256 _debateId, uint _winAgentId) external onlyOwner {
         Debate storage debate = debateList[_debateId];
         require(!debate.isResolved, "Debate is already resolved");
         require(_winAgentId == debate.agentAID || _winAgentId == debate.agentBID, "Invalid agent");
@@ -214,7 +215,8 @@ contract AIDebate is Initializable, Ownable {
                 uint256 betProfit = 0;
                 if (bet.chosenAgentId == debate.agentAID) {
                     betProfit = (bet.amount / debate.totalAgentABetAmount) * prizePool * (100 - debate.platformFeePercentage) / 100;
-                } else {
+                }
+                if ( bet.chosenAgentId == debate.agentBID) {
                     betProfit = (bet.amount / debate.totalAgentBBetAmount) * prizePool * (100 - debate.platformFeePercentage) / 100;
                 }
                 bet.winAmount = betProfit;
