@@ -141,7 +141,20 @@ contract AIDebate is Initializable, Ownable {
             betList[_debateId][msg.sender][_chosenAgent] = Bet(_debateId, msg.sender, _amount, 0,  _chosenAgent, false);
         }
         // record the address of the bettor into the addressJoinedList with _debateId as key
-        addressJoinedList[_debateId].push(msg.sender);
+        // Check if the address is already in the list
+        bool alreadyJoined = false;
+        for (uint256 i = 0; i < addressJoinedList[_debateId].length; i++) {
+            if (addressJoinedList[_debateId][i] == msg.sender) {
+                alreadyJoined = true;
+                break;
+            }
+        }
+
+        // If the address is not in the list, add it
+        if (!alreadyJoined) {
+            addressJoinedList[_debateId].push(msg.sender);
+        }
+        
         emit BetPlaced(_debateId, msg.sender, _chosenAgent, _amount, debate.platformFeePercentage);
     }
 
@@ -192,12 +205,6 @@ contract AIDebate is Initializable, Ownable {
         // consider event
         emit DebateDeleted(_debateId);
     }
-    // function transferCoin(address payable _to, uint256 _amount) private  {
-    //     require(address(this).balance >= _amount, "Insufficient balance in contract"); 
-    //     (bool success, ) = _to.call{value: _amount}(""); 
-    //     require(success, "Transfer token failed");
-    // }
-
 
     // this function is used to resolve a debate by whitelist. It takes 2 parameters: _debateId, winAgentId. The reward is calculated base on _feeRatio of the debate.
     function adminResolveDebate(uint256 _debateId, uint _winAgentId) external onlyOwner {
@@ -207,20 +214,26 @@ contract AIDebate is Initializable, Ownable {
         debate.isResolved = true;
         debate.winAgentId = _winAgentId;
         uint256 prizePool = debate.totalAgentABetAmount + debate.totalAgentBBetAmount;
-        // we calculate the winAmount per bettor when debate is resolved
+        uint256 profitPercentage = 100 - debate.platformFeePercentage;
+
+        // We calculate the winAmount per bettor when debate is resolved
         for (uint256 i = 0; i < addressJoinedList[_debateId].length; i++) {
             address bettor = addressJoinedList[_debateId][i];
-            Bet storage bet = betList[_debateId][bettor][_winAgentId];
-            if (bet.chosenAgentId == _winAgentId) {
-                uint256 betProfit = 0;
-                uint256 profitPercentage = 100 - debate.platformFeePercentage;
-                if (bet.chosenAgentId == debate.agentAID) {
-                    betProfit = (bet.amount / debate.totalAgentABetAmount) * prizePool * profitPercentage / 100;
-                }
-                if ( bet.chosenAgentId == debate.agentBID) {
-                    betProfit = (bet.amount / debate.totalAgentBBetAmount) * prizePool * profitPercentage / 100;
-                }
-                bet.winAmount = betProfit;
+            Bet storage betRecord = betList[_debateId][bettor][_winAgentId];
+            if (betRecord.chosenAgentId == _winAgentId) {
+            uint256 betProfit = 0;
+            // need to check if totalAgentABetAmount or totalAgentBBetAmount is 0 or not
+            if (betRecord.chosenAgentId == debate.agentAID && debate.totalAgentABetAmount == 0) {
+                betProfit = betRecord.amount * profitPercentage / 100;
+            } else if (betRecord.chosenAgentId == debate.agentBID && debate.totalAgentBBetAmount == 0) {
+                betProfit = betRecord.amount * profitPercentage / 100;
+            }
+            if (betRecord.chosenAgentId == debate.agentAID && debate.totalAgentABetAmount > 0) {
+                betProfit = (betRecord.amount * prizePool * profitPercentage) / (debate.totalAgentABetAmount * 100);
+            } else if (betRecord.chosenAgentId == debate.agentBID && debate.totalAgentBBetAmount > 0) {
+                betProfit = (betRecord.amount * prizePool * profitPercentage) / (debate.totalAgentBBetAmount * 100);
+            }
+            betRecord.winAmount = betProfit;
             }
         }
 
@@ -238,11 +251,11 @@ contract AIDebate is Initializable, Ownable {
         for (uint256 i = 0; i < addressJoinedList[_debateId].length; i++) {
             if (addressJoinedList[_debateId][i] == msg.sender) {
                 isBettor = true;
-            } else {
-                isBettor = false;
+                break; // Exit the loop early if the bettor is found
             }
         }
         require(isBettor, "You did not place any bet on this debate");
+        
         // check if the user has claimed the reward or not
         // find winAgentID
         uint256 winAgentID = debate.winAgentId;
