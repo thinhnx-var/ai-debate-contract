@@ -213,11 +213,12 @@ contract AIDebate is Initializable, Ownable {
             Bet storage bet = betList[_debateId][bettor][_winAgentId];
             if (bet.chosenAgentId == _winAgentId) {
                 uint256 betProfit = 0;
+                uint256 profitPercentage = 100 - debate.platformFeePercentage;
                 if (bet.chosenAgentId == debate.agentAID) {
-                    betProfit = (bet.amount / debate.totalAgentABetAmount) * prizePool * (100 - debate.platformFeePercentage) / 100;
+                    betProfit = (bet.amount / debate.totalAgentABetAmount) * prizePool * profitPercentage / 100;
                 }
                 if ( bet.chosenAgentId == debate.agentBID) {
-                    betProfit = (bet.amount / debate.totalAgentBBetAmount) * prizePool * (100 - debate.platformFeePercentage) / 100;
+                    betProfit = (bet.amount / debate.totalAgentBBetAmount) * prizePool * profitPercentage / 100;
                 }
                 bet.winAmount = betProfit;
             }
@@ -237,6 +238,8 @@ contract AIDebate is Initializable, Ownable {
         for (uint256 i = 0; i < addressJoinedList[_debateId].length; i++) {
             if (addressJoinedList[_debateId][i] == msg.sender) {
                 isBettor = true;
+            } else {
+                isBettor = false;
             }
         }
         require(isBettor, "You did not place any bet on this debate");
