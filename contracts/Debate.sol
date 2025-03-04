@@ -14,6 +14,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
     We are not creating proxy contract in this sample code.
     We are using Ownable contract from OpenZeppelin to manage the ownership of the contract.
     We are not checking for endSessionTimeStamp in placeBet function. We will add it later when we have the function to create / update the debate session.
+    We are not using math lib just for checking playformFeePercentage calculation. We just mannually calculate it.
  */
 
 contract AIDebate is Initializable, Ownable {
@@ -45,6 +46,7 @@ contract AIDebate is Initializable, Ownable {
         uint256 indexed debateId,
         uint winnAgentId
     );
+    //platformFeePercentage maximum is 10000. 1 represents 0.01%
     event DebateUpdated(
         uint256 indexed debateId,
         uint agentAID,
@@ -214,7 +216,7 @@ contract AIDebate is Initializable, Ownable {
         debate.isResolved = true;
         debate.winAgentId = _winAgentId;
         uint256 prizePool = debate.totalAgentABetAmount + debate.totalAgentBBetAmount;
-        uint256 profitPercentage = 100 - debate.platformFeePercentage;
+        uint256 profitPercentage = 10000 - debate.platformFeePercentage;
 
         // We calculate the winAmount per bettor when debate is resolved
         for (uint256 i = 0; i < addressJoinedList[_debateId].length; i++) {
@@ -224,14 +226,14 @@ contract AIDebate is Initializable, Ownable {
             uint256 betProfit = 0;
             // need to check if totalAgentABetAmount or totalAgentBBetAmount is 0 or not
             if (betRecord.chosenAgentId == debate.agentAID && debate.totalAgentABetAmount == 0) {
-                betProfit = betRecord.amount * profitPercentage / 100;
+                betProfit = betRecord.amount * profitPercentage / 10000;
             } else if (betRecord.chosenAgentId == debate.agentBID && debate.totalAgentBBetAmount == 0) {
-                betProfit = betRecord.amount * profitPercentage / 100;
+                betProfit = betRecord.amount * profitPercentage / 10000;
             }
             if (betRecord.chosenAgentId == debate.agentAID && debate.totalAgentABetAmount > 0) {
-                betProfit = (betRecord.amount * prizePool * profitPercentage) / (debate.totalAgentABetAmount * 100);
+                betProfit = (betRecord.amount * prizePool * profitPercentage) / (debate.totalAgentABetAmount * 10000);
             } else if (betRecord.chosenAgentId == debate.agentBID && debate.totalAgentBBetAmount > 0) {
-                betProfit = (betRecord.amount * prizePool * profitPercentage) / (debate.totalAgentBBetAmount * 100);
+                betProfit = (betRecord.amount * prizePool * profitPercentage) / (debate.totalAgentBBetAmount * 10000);
             }
             betRecord.winAmount = betProfit;
             }
