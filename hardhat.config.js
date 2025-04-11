@@ -16,12 +16,12 @@ module.exports = {
 		evmVersion: "istanbul",
 	},
 	networks: {
-		Test0G: {
-			url: "https://evmrpc-testnet.0g.ai/",
-			// url: "https://rpc-testnet.0g.ai",
+		zero: {
+			// url: "https://evmrpc-testnet.0g.ai/",
+			url: "https://16600.rpc.thirdweb.com/", // Thirdweb RPC
 			chainId: 16600,
 			accounts: [process.env.PRVKEY],
-			gas: 300000000,
+			gas: 50000,
       		gasPrice: 3000000000,
 		},
 	},
