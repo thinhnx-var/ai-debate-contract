@@ -18,11 +18,21 @@ module.exports = {
 	networks: {
 		zero: {
 			// url: "https://evmrpc-testnet.0g.ai/",
-			url: "https://16600.rpc.thirdweb.com/", // Thirdweb RPC
-			chainId: 16600,
+			// url: "https://rpc.ankr.com/0g_newton", // Thirdweb RPC
+			// url: "https://evm-rpc.0g.testnet.node75.org", // node75 RPC
+			url: "http://8.218.94.246:8545", // OG v3
+			// chainId: 16600,
+			chainId: 80087,
 			accounts: [process.env.PRVKEY],
 			gas: 50000,
       		gasPrice: 3000000000,
+		},
+		galileo: {
+			url: "https://evmrpc-testnet.0g.ai",
+			chainId: 80087,
+			accounts: [process.env.PRVKEY],
+			gas: 50000,
+	  		gasPrice: 3000000000,
 		},
 	},
 };

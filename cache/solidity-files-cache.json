@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/Users/thinhnx/Work/varmeta/ai-debate-contract/contracts/Debate.sol": {
-      "lastModificationDate": 1741073999221,
-      "contentHash": "d6b6ce1b4fbef983e114174f034693ae",
+      "lastModificationDate": 1744359878335,
+      "contentHash": "856fae255d589360a26d4d799fe2f8c4",
       "sourceName": "contracts/Debate.sol",
       "solcConfig": {
         "version": "0.8.28",
@@ -382,8 +382,8 @@
       ]
     },
     "/Users/thinhnx/Work/varmeta/ai-debate-contract/contracts/Lock.sol": {
-      "lastModificationDate": 1737874337967,
-      "contentHash": "f1056c0fa2b1c216e754f7a0eec6531a",
+      "lastModificationDate": 1744359883431,
+      "contentHash": "cd3a6c0c95f6f5d893cfe40a462826c4",
       "sourceName": "contracts/Lock.sol",
       "solcConfig": {
         "version": "0.8.28",
@@ -416,8 +416,8 @@
       "artifacts": []
     },
     "/Users/thinhnx/Work/varmeta/ai-debate-contract/contracts/MyToken.sol": {
-      "lastModificationDate": 1737521664252,
-      "contentHash": "048b5e7d9c09721793996b49665bf02c",
+      "lastModificationDate": 1744359889179,
+      "contentHash": "b402df19c0cb3e1b600640c8486e9a29",
       "sourceName": "contracts/MyToken.sol",
       "solcConfig": {
         "version": "0.8.28",
