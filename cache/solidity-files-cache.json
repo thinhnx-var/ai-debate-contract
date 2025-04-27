@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/Users/thinhnx/Work/varmeta/ai-debate-contract/contracts/Debate.sol": {
-      "lastModificationDate": 1744359878335,
-      "contentHash": "856fae255d589360a26d4d799fe2f8c4",
+      "lastModificationDate": 1745741657435,
+      "contentHash": "1552305b8de4acad654578a1b0a90345",
       "sourceName": "contracts/Debate.sol",
       "solcConfig": {
         "version": "0.8.28",
@@ -380,74 +380,6 @@
       "artifacts": [
         "IERC20Metadata"
       ]
-    },
-    "/Users/thinhnx/Work/varmeta/ai-debate-contract/contracts/Lock.sol": {
-      "lastModificationDate": 1744359883431,
-      "contentHash": "cd3a6c0c95f6f5d893cfe40a462826c4",
-      "sourceName": "contracts/Lock.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "evmVersion": "paris",
-          "optimizer": {
-            "enabled": false,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        "^0.8.28"
-      ],
-      "artifacts": []
-    },
-    "/Users/thinhnx/Work/varmeta/ai-debate-contract/contracts/MyToken.sol": {
-      "lastModificationDate": 1744359889179,
-      "contentHash": "b402df19c0cb3e1b600640c8486e9a29",
-      "sourceName": "contracts/MyToken.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "evmVersion": "paris",
-          "optimizer": {
-            "enabled": false,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        "^0.8.28"
-      ],
-      "artifacts": []
     }
   }
 }

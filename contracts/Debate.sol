@@ -18,7 +18,9 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
  */
 
 contract AIDebate is Initializable, Ownable {
-    constructor(address initialOwner) Ownable(initialOwner) {}
+    constructor(address initialOwner) Ownable(initialOwner) {
+        modList.push(initialOwner);
+    }
     // define the events that we need
     event BetPlaced(
         uint256 indexed debateId,
@@ -92,6 +94,33 @@ contract AIDebate is Initializable, Ownable {
         uint chosenAgentId;
         bool isClaimed;
     }
+    address[] public modList;
+
+    modifier onlyMod() {
+        bool isAllowed = false;
+        for (uint256 i = 0; i < modList.length; i++) {
+            if (modList[i] == msg.sender) {
+                isAllowed = true;
+                break;
+            }
+        }
+        require(isAllowed, "Not allowed");
+        _;
+    }
+
+    function addMod(address _mod) external onlyOwner {
+        modList.push(_mod);
+    }
+
+    function removeMod(address _mod) external onlyOwner {
+        for (uint256 i = 0; i < modList.length; i++) {
+            if (modList[i] == _mod) {
+                modList[i] = modList[modList.length - 1]; // Move last mod to the removed spot
+                modList.pop(); // Remove last element
+                break;
+            }
+        }
+    }
 
     // create instance of mapping for debates and bets.
     mapping(uint256 => Debate) public debateList; // store debateID to debate info. this list will be filled by admin ?
@@ -161,7 +190,7 @@ contract AIDebate is Initializable, Ownable {
     }
 
     // admin create debate
-    function adminCreateDebate(uint256 _debateId, uint _agentAID, uint _agentBID, uint256 _platformFeePercentage, uint256 _publicTimeStamp, uint256 _startTimeStamp, uint256 _sessionDuration) external onlyOwner {
+    function adminCreateDebate(uint256 _debateId, uint _agentAID, uint _agentBID, uint256 _platformFeePercentage, uint256 _publicTimeStamp, uint256 _startTimeStamp, uint256 _sessionDuration) external onlyMod {
         Debate storage debate = debateList[_debateId];
         require(debate.agentAID == 0 && debate.agentBID == 0, "Debate is already created");
         require(_startTimeStamp + _sessionDuration > _publicTimeStamp, "End time must be greater than public time");
@@ -179,7 +208,7 @@ contract AIDebate is Initializable, Ownable {
     }
 
     // admin update debate
-    function adminUpdateDebate(uint256 _debateId, uint _agentAID, uint _agentBID, uint256 _platformFeePercentage, uint256 _publicTimeStamp, uint256 _startTimeStamp, uint256 _sessionDuration) external onlyOwner {
+    function adminUpdateDebate(uint256 _debateId, uint _agentAID, uint _agentBID, uint256 _platformFeePercentage, uint256 _publicTimeStamp, uint256 _startTimeStamp, uint256 _sessionDuration) external onlyMod {
         Debate storage debate = debateList[_debateId];
         require(debate.agentAID != 0 && debate.agentBID != 0, "Debate is not created yet");
         require(block.timestamp < debate.publicTimeStamp - thirtyMinsBeforePublish, "Can not modify debate anymore");
@@ -197,7 +226,7 @@ contract AIDebate is Initializable, Ownable {
     }
 
     // admin delete debate - admin will set time to 0
-    function adminDeleteDebate(uint256 _debateId) external onlyOwner {
+    function adminDeleteDebate(uint256 _debateId) external onlyMod {
         Debate storage debate = debateList[_debateId];
         require(block.timestamp < debate.publicTimeStamp - thirtyMinsBeforePublish, "Can not remove debate anymore");
         require(debate.agentAID != 0 && debate.agentBID != 0, "Debate is not created yet");
@@ -209,7 +238,7 @@ contract AIDebate is Initializable, Ownable {
     }
 
     // this function is used to resolve a debate by whitelist. It takes 2 parameters: _debateId, winAgentId. The reward is calculated base on _feeRatio of the debate.
-    function adminResolveDebate(uint256 _debateId, uint _winAgentId) external onlyOwner {
+    function adminResolveDebate(uint256 _debateId, uint _winAgentId) external onlyMod {
         Debate storage debate = debateList[_debateId];
         require(!debate.isResolved, "Debate is already resolved");
         require(_winAgentId == debate.agentAID || _winAgentId == debate.agentBID, "Invalid agent");
@@ -277,43 +306,56 @@ contract AIDebate is Initializable, Ownable {
 
     // for now we dont have adminSetDebateSession function. So these functions are enough.
 
-    // this function is used to convert address to payable address - helper function
+    // convert address to payable address - helper function
     function convertAddressToPayable(address _address) private pure returns (address payable) {
         return payable(_address); 
     }
-
+    // get debate informations
     function getDebateInfo(uint256 _debateId) external view returns (Debate memory) {
         Debate storage debate = debateList[_debateId];
         return debate;
     }
 
-
-    // For whitelist // 1 of 3 ways to do whitelist: 1. Use a mapping. 2. Use severside verification. 3. Use a contract and merkle tree
-    mapping(address => bool) private whitelist;
-    function addWhitelist(address _address) external onlyOwner {
-        whitelist[_address] = true;
+    // owner can withdraw all the balance in the contract (both for unresolved and resolved debates)
+    function withdrawAll() external onlyOwner {
+        address payable _recipient = convertAddressToPayable(msg.sender);
+        _recipient.transfer(address(this).balance);
     }
-    function removeWhitelist(address _address) external onlyOwner {
-        whitelist[_address] = false;
+    // withdraw by debateID - for resolved debates only
+    function withdrawByID(uint256 _debateId) external onlyOwner {
+        Debate storage debate = debateList[_debateId];
+        require(debate.isResolved, "Debate is not resolved yet");
+        require(debate.winAgentId != 0, "Debate is not resolved yet");
+        uint256 prizePool = debate.totalAgentABetAmount + debate.totalAgentBBetAmount;
+        uint256 amountToWithdraw = (prizePool * debate.platformFeePercentage) / 10000;
+        address payable _recipient = convertAddressToPayable(msg.sender);
+        require(address(this).balance >= amountToWithdraw, "Insufficient balance in contract");
+        _recipient.transfer(amountToWithdraw);
     }
 
-    // compare address and sender - helper
-    function compareSenderWithAddressString(string memory _addressString) private view returns (bool) {
-        bytes memory senderBytes = abi.encodePacked(msg.sender);
-        bytes memory addressStringBytes = bytes(_addressString);
-
-        // Check if both are of the same length (20 bytes for addresses)
-        if (senderBytes.length != 20 || addressStringBytes.length != 20) {
-            return false;
-        }
-
-        for (uint256 i = 0; i < 20; i++) {
-            if (senderBytes[i] != addressStringBytes[i]) {
-                return false;
-            }
-        }
-
-        return true;
+    function withdrawByAmount(uint256 _amount) external onlyOwner {
+        address payable _recipient = convertAddressToPayable(msg.sender);
+        require(address(this).balance >= _amount, "Insufficient balance in contract");
+        _recipient.transfer(_amount);
     }
+
+    // // compare address and sender - helper
+    // function compareSenderWithAddressString(string memory _addressString) private view returns (bool) {
+    //     bytes memory senderBytes = abi.encodePacked(msg.sender);
+    //     bytes memory addressStringBytes = bytes(_addressString);
+
+    //     // Check if both are of the same length (20 bytes for addresses)
+    //     if (senderBytes.length != 20 || addressStringBytes.length != 20) {
+    //         return false;
+    //     }
+
+    //     for (uint256 i = 0; i < 20; i++) {
+    //         if (senderBytes[i] != addressStringBytes[i]) {
+    //             return false;
+    //         }
+    //     }
+
+    //     return true;
+    // }
 
 }

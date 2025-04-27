@@ -2,9 +2,10 @@ const { ethers } = require("hardhat");
 
 async function main() {
   try {
-    const [deployer] = await ethers.getSigners();
+    // const [deployer] = await ethers.getSigners();
+    const ownerHardCode = process.env.OWNER;
     const AIDebateContract = await ethers.getContractFactory("AIDebate");
-    const aidsc = await AIDebateContract.deploy(deployer.address);
+    const aidsc = await AIDebateContract.deploy(ownerHardCode);
     await aidsc.waitForDeployment();
 
     console.log("AIDebate deployed to:", aidsc.target);
