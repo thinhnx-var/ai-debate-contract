@@ -34,5 +34,12 @@ module.exports = {
 			gas: 50000,
 	  		gasPrice: 3000000000,
 		},
+		newgalileo: {
+			url: "https://evmrpc-testnet.0g.ai",
+			chainId: 16601,
+			accounts: [process.env.PRVKEY],
+			gas: 50000,
+	  		gasPrice: 3000000000,
+		},
 	},
 };
