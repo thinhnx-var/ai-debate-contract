@@ -13,9 +13,10 @@
     - `0xA1ef2b6d1B4cd00324Cc8BFD4F6B521418aCf1cA` ||| `New-Account-Truong`
     - `0xC5f332A794e7a72dff7998A0Bb49648aD5E99DD5` ||| `0G Foundation Account`
 ## Latest Update: (With admin withdrawl function)
-- `0x3859E9541d951A4B55Dd068032d2A5838FeEf271`  ||| OG Foundation Product - Galileo
-- `0x9ba3574aE9856F9b1665b2eC95B3F329EE9Df787`  ||| OG Foundation Staging - Galileo
+
+- `0x2C5EA61ec35E5EaAd6848DE85758DD716FB49756`  ||| OG Foundation Product - Galileo
+- `0xe9243F834D628802a6Fd01D43d5b07297895c618`  ||| OG Foundation Staging - Galileo
 
 ## Latest Update: New Galileo (With admin withdrawl function)
-- `0x2C5EA61ec35E5EaAd6848DE85758DD716FB49756`  ||| OG Foundation Product - NewGalileo
-- `0xe9243F834D628802a6Fd01D43d5b07297895c618`  ||| OG Foundation Staging - NewGalileo
+- `0x3859E9541d951A4B55Dd068032d2A5838FeEf271`  ||| OG Foundation Product - NewGalileo
+- `0x9ba3574aE9856F9b1665b2eC95B3F329EE9Df787`  ||| OG Foundation Staging - NewGalileo
