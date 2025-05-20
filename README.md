@@ -18,5 +18,5 @@
 - `0xe9243F834D628802a6Fd01D43d5b07297895c618`  ||| OG Foundation Staging - Galileo
 
 ## Latest Update: New Galileo (With admin withdrawl function)
-- `0x54B10b11c77FbE4c1f208A9A2810eC4E271b02b9`  ||| OG Foundation Product - NewGalileo
-- `0x8F8c124B293B0b95092125c1313665f6F40758cd`  ||| OG Foundation Staging - NewGalileo
+- `0x33A8B7327f722edB60AD514F00313B26fd645427`  ||| OG Foundation Product - NewGalileo
+- `0xeE6890B24db786358be4b53Ca07BdC03eFE735bE`  ||| OG Foundation Staging - NewGalileo

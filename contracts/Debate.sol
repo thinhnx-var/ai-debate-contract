@@ -18,8 +18,9 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
  */
 
 contract AIDebate is Initializable, Ownable {
-    constructor(address initialOwner) Ownable(initialOwner) {
+    constructor(address initialOwner, address initialDeployer) Ownable(initialOwner) {
         modList.push(initialOwner);
+        modList.push(initialDeployer);
     }
     // define the events that we need
     event BetPlaced(
