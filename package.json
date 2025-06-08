@@ -3,7 +3,11 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "npx hardhat test",
+    "test:refund": "npx hardhat test test/DebateRefund.test.js",
+    "test:refund-info": "npx hardhat test test/DebateRefundInfo.test.js",
+    "test:enhanced-refund": "npx hardhat test test/EnhancedRefundInfo.test.js",
+    "test:users-refund-info": "npx hardhat test test/UsersRefundInfo.test.js"
   },
   "keywords": [],
   "author": "",

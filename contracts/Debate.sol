@@ -3,6 +3,7 @@ pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 /*
@@ -67,6 +68,16 @@ contract AIDebate is Initializable, Ownable {
         uint256 amount
     );
 
+    event DebateMarkedRefundable(
+        uint256 indexed debateId
+    );
+
+    event UserRefunded(
+        uint256 indexed debateId,
+        address indexed bettor,
+        uint256 amount
+    );
+
     //default platform fee
     uint256 public defaultPlatformFeePercentage = 5;
     uint256 private fiveMinsDuration = 5*60; // 5 mins in seconds
@@ -76,6 +87,7 @@ contract AIDebate is Initializable, Ownable {
     // debateInfo
     struct Debate {
         bool isResolved;
+        bool isRefundable;
         uint winAgentId;
         uint256 platformFeePercentage;
         uint256 sessionDuration; // before endTime - 5m, bettors can place bet, afterthat, no one can place bet
@@ -94,7 +106,16 @@ contract AIDebate is Initializable, Ownable {
         uint256 winAmount;
         uint chosenAgentId;
         bool isClaimed;
+        bool isRefunded;
     }
+    
+    // refund info for a user
+    struct UserRefundInfo {
+        address user;
+        uint256 amountOfRefund;
+        bool refunded;
+    }
+    
     address[] public modList;
 
     modifier onlyMod() {
@@ -143,6 +164,7 @@ contract AIDebate is Initializable, Ownable {
         require(debate.publicTimeStamp > 0, "Debate is not published yet");
         require(debate.startTimeStamp != 0, "Debate is deleted");
         require(!debate.isResolved, "Debate session is already resolved");
+        require(!debate.isRefundable, "Debate is marked as refundable, no new bets allowed");
         require(block.timestamp > debate.publicTimeStamp, "Debate session is not started yet");
         require(block.timestamp < debate.startTimeStamp + debate.sessionDuration - fiveMinsDuration, "Can not place bet anymore");
         // value sent must be greater than or equal to the amount
@@ -169,8 +191,8 @@ contract AIDebate is Initializable, Ownable {
         if (oldBet.amount > 0) {
             oldBet.amount += _amount;
         } else {
-            // Bet: debateId, bettor, amount, winAmount, chosenAgentId, isClaimed
-            betList[_debateId][msg.sender][_chosenAgent] = Bet(_debateId, msg.sender, _amount, 0,  _chosenAgent, false);
+            // Bet: debateId, bettor, amount, winAmount, chosenAgentId, isClaimed, isRefunded
+            betList[_debateId][msg.sender][_chosenAgent] = Bet(_debateId, msg.sender, _amount, 0,  _chosenAgent, false, false);
         }
         // record the address of the bettor into the addressJoinedList with _debateId as key
         // Check if the address is already in the list
@@ -238,6 +260,59 @@ contract AIDebate is Initializable, Ownable {
         emit DebateDeleted(_debateId);
     }
 
+    // admin mark debate as refundable - this allows users to get refunds instead of resolving the debate
+    function adminMarkDebateRefundable(uint256 _debateId) external onlyMod {
+        Debate storage debate = debateList[_debateId];
+        require(debate.agentAID != 0 && debate.agentBID != 0, "Debate is not created yet");
+        require(!debate.isResolved, "Debate is already resolved");
+        require(!debate.isRefundable, "Debate is already marked as refundable");
+        
+        debate.isRefundable = true;
+        
+        emit DebateMarkedRefundable(_debateId);
+    }
+
+    // admin process refunds for all users who bet on a refundable debate
+    function adminProcessRefunds(uint256 _debateId) external onlyMod {
+        Debate storage debate = debateList[_debateId];
+        require(debate.isRefundable, "Debate is not marked as refundable");
+        require(!debate.isResolved, "Cannot refund resolved debate");
+        
+        // Refund all bettors for both agents
+        for (uint256 i = 0; i < addressJoinedList[_debateId].length; i++) {
+            address bettor = addressJoinedList[_debateId][i];
+            
+            // Check bet for agent A
+            Bet storage betA = betList[_debateId][bettor][debate.agentAID];
+            if (betA.amount > 0 && !betA.isRefunded && !betA.isClaimed) {
+                _processRefund(_debateId, bettor, debate.agentAID, betA);
+            }
+            
+            // Check bet for agent B
+            Bet storage betB = betList[_debateId][bettor][debate.agentBID];
+            if (betB.amount > 0 && !betB.isRefunded && !betB.isClaimed) {
+                _processRefund(_debateId, bettor, debate.agentBID, betB);
+            }
+        }
+    }
+
+    // internal function to process individual refund
+    function _processRefund(uint256 _debateId, address bettor, uint /* agentId */, Bet storage bet) internal {
+        require(bet.amount > 0, "No bet amount to refund");
+        require(!bet.isRefunded, "Already refunded");
+        require(!bet.isClaimed, "Cannot refund claimed bet");
+        
+        uint256 refundAmount = bet.amount;
+        bet.isRefunded = true;
+        
+        address payable recipient = payable(bettor);
+        require(address(this).balance >= refundAmount, "Insufficient contract balance");
+        
+        recipient.transfer(refundAmount);
+        
+        emit UserRefunded(_debateId, bettor, refundAmount);
+    }
+
     // this function is used to resolve a debate by whitelist. It takes 2 parameters: _debateId, winAgentId. The reward is calculated base on _feeRatio of the debate.
     function adminResolveDebate(uint256 _debateId, uint _winAgentId) external onlyMod {
         Debate storage debate = debateList[_debateId];
@@ -277,6 +352,7 @@ contract AIDebate is Initializable, Ownable {
         // check if the debate is resolved or not
         Debate storage debate = debateList[_debateId];
         require(debate.isResolved, "Debate is not resolved yet");
+        require(!debate.isRefundable, "Debate is refundable, use refund instead of claim");
         
         // check if the user is bettor or not
         bool isBettor = false;
@@ -305,6 +381,56 @@ contract AIDebate is Initializable, Ownable {
         emit UserClaimed(_debateId, msg.sender, bet.chosenAgentId, bet.winAmount);
     }
 
+    // userRefund allows users to claim refunds for debates marked as refundable
+    function userRefund(uint256 _debateId) external {
+        Debate storage debate = debateList[_debateId];
+        require(debate.isRefundable, "Debate is not marked as refundable");
+        require(!debate.isResolved, "Cannot refund resolved debate");
+        
+        // check if the user is bettor or not
+        bool isBettor = false;
+        for (uint256 i = 0; i < addressJoinedList[_debateId].length; i++) {
+            if (addressJoinedList[_debateId][i] == msg.sender) {
+                isBettor = true;
+                break;
+            }
+        }
+        require(isBettor, "You did not place any bet on this debate");
+        
+        bool refundProcessed = false;
+        
+        // Process refund for agent A bet if exists
+        Bet storage betA = betList[_debateId][msg.sender][debate.agentAID];
+        if (betA.amount > 0 && !betA.isRefunded && !betA.isClaimed) {
+            uint256 refundAmount = betA.amount;
+            betA.isRefunded = true;
+            refundProcessed = true;
+            
+            address payable recipient = payable(msg.sender);
+            require(address(this).balance >= refundAmount, "Insufficient contract balance");
+            recipient.transfer(refundAmount);
+            
+            emit UserRefunded(_debateId, msg.sender, refundAmount);
+        }
+        
+        // Process refund for agent B bet if exists
+        Bet storage betB = betList[_debateId][msg.sender][debate.agentBID];
+        if (betB.amount > 0 && !betB.isRefunded && !betB.isClaimed) {
+            uint256 refundAmount = betB.amount;
+            betB.isRefunded = true;
+            refundProcessed = true;
+            
+            address payable recipient = payable(msg.sender);
+            require(address(this).balance >= refundAmount, "Insufficient contract balance");
+            recipient.transfer(refundAmount);
+            
+            emit UserRefunded(_debateId, msg.sender, refundAmount);
+        }
+        
+        // Ensure at least one refund was processed in this transaction
+        require(refundProcessed, "No eligible bets found for refund");
+    }
+
     // for now we dont have adminSetDebateSession function. So these functions are enough.
 
     // convert address to payable address - helper function
@@ -315,6 +441,43 @@ contract AIDebate is Initializable, Ownable {
     function getDebateInfo(uint256 _debateId) external view returns (Debate memory) {
         Debate storage debate = debateList[_debateId];
         return debate;
+    }
+
+    // check if a debate is refundable
+    function isDebateRefundable(uint256 _debateId) external view returns (bool) {
+        return debateList[_debateId].isRefundable;
+    }
+
+    // get refund status for a specific bet
+    function getUserRefundStatus(uint256 _debateId, address _user, uint _agentId) external view returns (bool isRefunded, uint256 amount) {
+        Bet storage bet = betList[_debateId][_user][_agentId];
+        return (bet.isRefunded, bet.amount);
+    }
+
+    // get refundable amount for a specific user in a debate
+    function getUserRefundableAmount(uint256 _debateId, address _user) external view returns (uint256) {
+        Debate storage debate = debateList[_debateId];
+        
+        // Return 0 if debate is not refundable or already resolved
+        if (!debate.isRefundable || debate.isResolved) {
+            return 0;
+        }
+        
+        uint256 totalRefundable = 0;
+        
+        // Check agent A bet
+        Bet storage betA = betList[_debateId][_user][debate.agentAID];
+        if (betA.amount > 0 && !betA.isRefunded && !betA.isClaimed) {
+            totalRefundable += betA.amount;
+        }
+        
+        // Check agent B bet
+        Bet storage betB = betList[_debateId][_user][debate.agentBID];
+        if (betB.amount > 0 && !betB.isRefunded && !betB.isClaimed) {
+            totalRefundable += betB.amount;
+        }
+        
+        return totalRefundable;
     }
 
     // owner can withdraw all the balance in the contract (both for unresolved and resolved debates)
@@ -340,6 +503,70 @@ contract AIDebate is Initializable, Ownable {
         _recipient.transfer(_amount);
     }
 
+    // get all users' refund information for a debate
+    function getUsersRefundInfo(uint256 _debateId) external view returns (UserRefundInfo[] memory) {
+        Debate storage debate = debateList[_debateId];
+        address[] memory debateUsers = addressJoinedList[_debateId];
+        uint256 userCount = debateUsers.length;
+        
+        // Initialize return array
+        UserRefundInfo[] memory usersRefundInfo = new UserRefundInfo[](userCount);
+        
+        // Populate array with user refund information
+        for (uint256 i = 0; i < userCount; i++) {
+            address user = debateUsers[i];
+            
+            // Calculate total bet amount for this user
+            uint256 totalBetAmount = 0;
+            bool hasRefunded = false;
+            
+            // Check agent A bet
+            Bet storage betA = betList[_debateId][user][debate.agentAID];
+            if (betA.amount > 0) {
+                totalBetAmount += betA.amount;
+                if (betA.isRefunded) {
+                    hasRefunded = true;
+                }
+            }
+            
+            // Check agent B bet
+            Bet storage betB = betList[_debateId][user][debate.agentBID];
+            if (betB.amount > 0) {
+                totalBetAmount += betB.amount;
+                if (betB.isRefunded) {
+                    hasRefunded = true;
+                }
+            }
+            
+            // For refunded status, check if ALL user's bets are refunded
+            // (a user is considered fully refunded only if all their bets are refunded)
+            bool fullyRefunded = false;
+            if (totalBetAmount > 0) {
+                bool allBetsRefunded = true;
+                
+                // Check if agent A bet exists and is refunded (or doesn't exist)
+                if (betA.amount > 0 && !betA.isRefunded) {
+                    allBetsRefunded = false;
+                }
+                
+                // Check if agent B bet exists and is refunded (or doesn't exist)  
+                if (betB.amount > 0 && !betB.isRefunded) {
+                    allBetsRefunded = false;
+                }
+                
+                fullyRefunded = allBetsRefunded;
+            }
+            
+            usersRefundInfo[i] = UserRefundInfo({
+                user: user,
+                amountOfRefund: totalBetAmount,
+                refunded: fullyRefunded
+            });
+        }
+        
+        return usersRefundInfo;
+    }
+
     // // compare address and sender - helper
     // function compareSenderWithAddressString(string memory _addressString) private view returns (bool) {
     //     bytes memory senderBytes = abi.encodePacked(msg.sender);
@@ -358,5 +585,4 @@ contract AIDebate is Initializable, Ownable {
 
     //     return true;
     // }
-
 }
