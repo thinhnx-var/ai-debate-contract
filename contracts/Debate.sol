@@ -77,6 +77,10 @@ contract AIDebate is Initializable, Ownable {
         address indexed bettor,
         uint256 amount
     );
+    event refundSuccessful(
+        uint256 indexed debateId,
+        uint256 amountOfUsers
+    );
 
     //default platform fee
     uint256 public defaultPlatformFeePercentage = 5;
@@ -294,6 +298,10 @@ contract AIDebate is Initializable, Ownable {
                 _processRefund(_debateId, bettor, debate.agentBID, betB);
             }
         }
+        emit refundSuccessful(
+            _debateId,
+            addressJoinedList[_debateId].length
+        );
     }
 
     // internal function to process individual refund
